@@ -1,0 +1,93 @@
+#!/bin/bash
+
+#
+# Script to automate your git squash process
+# 
+# Thanasis Polychronakis
+# thanpolas@gmail.com
+#
+###
+### Configure
+###
+# Where is your git?
+git=/usr/bin/git
+# What is your master branch we will re-branch from?
+mbranch=upstream/master
+# What is your remote we will push to?
+originBranch=origin
+
+
+###
+### DO NOT EDIT BELOW THIS LINE
+###
+
+function checkerr {
+	if [ $1 -ne 0 ]; then 
+		echo "Error in execution:"
+		echo $2
+		exit $1
+	fi
+}
+
+if [ -z $1 ]; then
+	echo "Usage: squash [branch name]"
+	exit
+fi
+
+echo 'Starting squashing!'
+
+# set temp branch name
+tmpbranch="$1_tbs"
+
+# execute renaming of branch to temp
+echo "#1 Renaming target branch to temp"
+ret=$(git branch -m $1 ${tmpbranch} 2>&1)
+# Check if git executed successfuly 
+checkerr $? "${ret}"
+
+echo "#2 Checking out to master"
+ret=$(git checkout ${mbranch} 2>&1)
+checkerr $? "${ret}"
+
+echo "#3 Creating new branch to squash onto"
+ret=$(git checkout -b $1 2>&1)
+checkerr $? "${ret}"
+
+echo "#4 Merging temp branch to newly created one"
+ret=$(git merge --squash ${tmpbranch} 2>&1)
+checkerr $? "${ret}"
+
+
+# Get files that have been modified or added
+echo "#5 Checking for Modified and Added files"
+retStatus=$(git status --porcelain 2>&1)
+checkerr $? "${retStatus}"
+
+# Go through all modified or added files
+for EACH in `echo ${retStatus} |grep -o -e "[^\S+]*"`; do
+	if [[ $EACH = "M" || $EACH == "A" ]]; then
+		continue;
+	elif [ $EACH = "??" ]; then
+		# Stop loop if we find newly untracked changes
+		break;
+	fi
+	
+	echo "#6 Adding file: ${EACH}"
+done
+
+echo "#7 Comminting changes"
+git commit
+
+echo "#8 Pushing to ${originBranch}"
+ret=$(git push -ff ${originBranch} $1 2>&1)
+checkerr $? "${ret}"
+
+echo "#9 Deleting temp branch"
+ret=$(git branch -d ${tmpbranch} 2>&1)
+checkerr $? "${ret}"
+
+echo "All done!"
+
+
+
+
