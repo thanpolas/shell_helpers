@@ -78,14 +78,21 @@ done
 echo "#7 Comminting changes"
 git commit
 
-echo "#8 Pushing to ${originBranch}"
-ret=$(git push -ff ${originBranch} $1 2>&1)
-checkerr $? "${ret}"
+echo -n "Push branch to origin? Y/N:"
+read wish;
+if [ ${wish} = "Y" ]; then
+	echo "#8 Pushing to ${originBranch}"
+	ret=$(git push -ff ${originBranch} $1 2>&1)
+	checkerr $? "${ret}"
+fi
 
-echo "#9 Deleting temp branch"
-ret=$(git branch -D ${tmpbranch} 2>&1)
-checkerr $? "${ret}"
-
+echo -n "Delete temp (original copy) branch? Y/N:"
+read wish;
+if [ ${wish} = "Y" ]; then
+	echo "#9 Deleting temp branch"
+	ret=$(git branch -D ${tmpbranch} 2>&1)
+	checkerr $? "${ret}"
+fi
 echo "All done!"
 
 
