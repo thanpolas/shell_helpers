@@ -83,7 +83,7 @@ ret=$(git push -ff ${originBranch} $1 2>&1)
 checkerr $? "${ret}"
 
 echo "#9 Deleting temp branch"
-ret=$(git branch -d ${tmpbranch} 2>&1)
+ret=$(git branch -D ${tmpbranch} 2>&1)
 checkerr $? "${ret}"
 
 echo "All done!"
