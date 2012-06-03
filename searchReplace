@@ -1,0 +1,6 @@
+#!/bin/bash
+if [ -z $1 ]; then
+	echo "Usage: searchReplace [file pattern] [regexp search] [regexp replace]"
+	exit
+fi
+find . -type f -name "$1" -print|xargs perl -i -pe 's/$2/$3/g' 

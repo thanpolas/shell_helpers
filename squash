@@ -12,7 +12,7 @@
 # Where is your git?
 git=/usr/bin/git
 # What is your master branch we will re-branch from?
-mbranch=upstream/master
+mbranch=origin/master
 # What is your remote we will push to?
 originBranch=origin
 
