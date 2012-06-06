@@ -7,6 +7,7 @@ squash
 ------
 
 Will squash all your branch's commits into one. Usage:
+
     squash [branch_name] [optionally set a checkout source e.g. upstream/next]
 
 What this script does is:
@@ -19,3 +20,11 @@ What this script does is:
  * `Step 7` [Prompt to] Push to origin with fast forward option (overwrite)
  * `Step 8` [Prompt to] Delete temp branch
  
+
+searchReplace
+------------
+Very plain one liner search & replace. Usage: 
+
+    searchReplace [file pattern] [regexp search] [regexp replace]
+
+But really, just copy paste it on your shell...
