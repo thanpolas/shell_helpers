@@ -11,9 +11,9 @@
 ###
 # Where is your git?
 git=/usr/bin/git
-# What is your master branch we will re-branch from?
-mbranch=origin/master
-# What is your remote we will push to?
+# What is the branch we will get a fresh checkout from?
+mbranch=upstream/master
+# What is the remote we will push to?
 originBranch=origin
 
 
@@ -30,9 +30,21 @@ function checkerr {
 }
 
 if [ -z $1 ]; then
-	echo "Usage: squash [branch name]"
+	echo "Usage: squash [branch name] [optionaly set the checkout branch e.g. upstream/master]"
 	exit
 fi
+
+if [ $2 ]; then
+	mbranch=$2
+else
+	echo -n "Fresh checkout from [${mbranch}] - Enter to continue or type new name:"
+	read newbranch;
+	if [ ${newbranch} ]; then
+		mbranch=$newbranch
+	fi
+fi
+
+echo ${mbranch}
 
 echo 'Starting squashing!'
 
@@ -45,21 +57,17 @@ ret=$(git branch -m $1 ${tmpbranch} 2>&1)
 # Check if git executed successfuly 
 checkerr $? "${ret}"
 
-echo "#2 Checking out to master"
-ret=$(git checkout ${mbranch} 2>&1)
+echo "#2 Checking out fresh copy from [${mbranch}]"
+ret=$(git checkout ${mbranch} -b $1 2>&1)
 checkerr $? "${ret}"
 
-echo "#3 Creating new branch to squash onto"
-ret=$(git checkout -b $1 2>&1)
-checkerr $? "${ret}"
-
-echo "#4 Merging temp branch to newly created one"
+echo "#3 Merging temp branch to newly created one"
 ret=$(git merge --squash ${tmpbranch} 2>&1)
 checkerr $? "${ret}"
 
 
 # Get files that have been modified or added
-echo "#5 Checking for Modified and Added files"
+echo "#4 Checking for Modified and Added files"
 retStatus=$(git status --porcelain 2>&1)
 checkerr $? "${retStatus}"
 
@@ -72,16 +80,16 @@ for EACH in `echo ${retStatus} |grep -o -e "[^\S+]*"`; do
 		break;
 	fi
 	
-	echo "#6 Adding file: ${EACH}"
+	echo "#5 Adding file: ${EACH}"
 done
 
-echo "#7 Comminting changes"
+echo "#6 Commiting changes"
 git commit
 
 echo -n "Push branch to origin? Y/N:"
 read wish;
 if [ ${wish} = "Y" ]; then
-	echo "#8 Pushing to ${originBranch}"
+	echo "#7 Pushing to ${originBranch}"
 	ret=$(git push -ff ${originBranch} $1 2>&1)
 	checkerr $? "${ret}"
 fi
@@ -89,7 +97,7 @@ fi
 echo -n "Delete temp (original copy) branch? Y/N:"
 read wish;
 if [ ${wish} = "Y" ]; then
-	echo "#9 Deleting temp branch"
+	echo "#8 Deleting temp branch"
 	ret=$(git branch -D ${tmpbranch} 2>&1)
 	checkerr $? "${ret}"
 fi
