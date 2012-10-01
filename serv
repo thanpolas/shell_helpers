@@ -1,0 +1,40 @@
+#!/usr/bin/env node
+
+// a simple static webserver
+var connect = require('connect');
+var path = require('path');
+
+
+var filename = path.basename(process.argv[1]);
+process.argv.forEach(function(val, index, array){
+  if (1 >= index)
+    return;
+  if (val.match(/(\-h|\-help)/))
+    showHelp();
+});
+
+var port = process.argv[2] || 5555;
+var userpath = process.argv[3] || '';
+
+
+//var dir = path.resolve(findup(process.cwd(), 'grunt.js'), '../node_modules/grunt');
+var dir = path.resolve(process.cwd(), userpath);
+
+
+console.log('Starting static web server...\n');
+console.log('Web root: ' + dir);
+console.log('Port    : ' + port);
+console.log('Go to   : http://localhost:' + port);
+try {
+  var app = connect()
+    .use(connect.static(__dirname))
+    .listen(port);
+} catch (e) {
+  console.log(e);
+}
+
+function showHelp()
+{
+  console.log('Usage: ' + filename + ' [port] [path]\n');
+  process.exit(1);
+}
