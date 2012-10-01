@@ -27,7 +27,7 @@ console.log('Port    : ' + port);
 console.log('Go to   : http://localhost:' + port);
 try {
   var app = connect()
-    .use(connect.static(__dirname))
+    .use(connect.static(dir))
     .listen(port);
 } catch (e) {
   console.log(e);
