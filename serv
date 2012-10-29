@@ -3,6 +3,7 @@
 // a simple static webserver
 var connect = require('connect');
 var path = require('path');
+var exec = require('child_process').exec;
 
 
 var filename = path.basename(process.argv[1]);
@@ -24,11 +25,19 @@ var dir = path.resolve(process.cwd(), userpath);
 console.log('Starting static web server...\n');
 console.log('Web root: ' + dir);
 console.log('Port    : ' + port);
-console.log('Go to   : http://localhost:' + port);
+console.log('Going to   : http://localhost:' + port);
 try {
   var app = connect()
     .use(connect.static(dir))
     .listen(port);
+
+  exec('open -a Google\\ Chrome\\ Canary http://localhost:' + port,
+    function(error, stdout, stderr){
+      if (error && error.length) {
+        console.log('Launching Chrome Canary error:\n' + error);
+      }
+    });
+
 } catch (e) {
   console.log(e);
 }
