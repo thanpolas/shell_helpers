@@ -1,0 +1,605 @@
+#!/bin/bash
+
+# Copyright (c) 2013 Thomas Allen <thomas@oinksoft.com>
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+# ======================================================================
+# goog: Google Closure Tools assets manager and build tool.
+#
+# usage: goog <command> [options ...]
+#
+# Commands:
+#   build      Build project assets.
+#   help       Display help about a command.
+#   install    Install the Closure Tools locally.
+#   mirror     Set up a mirror that `install' can use.
+#   self-test  Run this script's tests. Takes a while!
+#   skel       Generate a new project skeleton.
+# ======================================================================
+
+# Mirrors for pre-built Closure Tools packages, tried in left-to-right
+# order.
+MIRROR_URL=(http://oinksoft.com/static/goog)
+
+# Directory where goog writes all of its files.
+BASE_DIR="$HOME/.goog"
+
+# Possible locations of configuration files.
+CONFIG=($PWD/.googrc \
+        $HOME/.googrc \
+        /etc/googrc)
+
+# Where goog downloads packages.
+CACHE="$BASE_DIR/cache"
+
+# Executables required to install a new mirror
+ANT=ant
+GIT=git
+SVN=svn
+
+# Executables required to install the Closure Tools
+#
+# Either `curl' or `wget' is also required.
+PYTHON=python
+
+usage() {
+    echo "goog: Google Closure Tools assets manager and build tool."
+    echo
+    echo "usage: goog <command> [options ...]"
+    echo
+    echo "Commands:"
+    echo "  build      Build project assets."
+    echo "  help       Display help about a command."
+    echo "  install    Install the Closure Tools locally."
+    echo "  mirror     Set up a mirror."
+    echo "  self-test  Run this script's tests. Takes a while!"
+    echo "  skel       Generate a project skeleton."
+    echo
+    echo "Configuration files are read in this order:"
+    for F in ${CONFIG[@]}
+    do
+        echo "  $F"
+    done
+    exit 1
+}
+
+main() {
+    [[ $# -eq 0 ]] && usage
+    [[ -r "$CONFIG" ]] && source "$CONFIG"
+
+    mkdir -p "$CACHE"
+
+    case $1 in
+        'build')     do_build $*     ;;
+        'help')      do_help $*      ;;
+        'install')   do_install $*   ;;
+        'mirror')    do_mirror $*    ;;
+        'self-test') do_self_test $* ;;
+        'skel')      do_skel $*      ;;
+        *)           usage           ;;
+    esac
+}
+
+# ======================================================================
+# build [<all|js|templates|css|>]
+# ======================================================================
+
+do_build() {
+    echo Not implemented.
+}
+
+build_usage() {
+    echo "build: Build project assets."
+    echo
+    echo "usage: goog build [<all|js|templates|css>]"
+    echo
+    echo "  target  The assets to build (default: all)"
+}
+
+# ======================================================================
+# help <command>
+# ======================================================================
+
+do_help() {
+    case "$2" in
+        'build')     build_usage     ;;
+        'help')      help_usage      ;;
+        'install')   install_usage   ;;
+        'mirror')    mirror_usage    ;;
+        'self-test') self_test_usage ;;
+        'skel')      skel_usage      ;;
+        *)           usage           ;;
+    esac
+    exit 1
+}
+
+help_usage() {
+    echo "help: Get help"
+    echo
+    echo "usage: goog help <command>"
+    echo
+    echo "  command  Usage is shown for the requested command"
+}
+
+# ======================================================================
+# install
+# ======================================================================
+
+INSTALL_LIB=library
+INSTALL_COMPILER='compiler.jar'
+INSTALL_TEMPLATES='soy.jar'
+INSTALL_STYLESHEETS='closure-stylesheets.jar'
+INSTALL_TARGETS=("$INSTALL_LIB" \
+                 "$INSTALL_COMPILER" \
+                 "$INSTALL_TEMPLATES")
+
+do_install() {
+    echo Installing Google Closure Tools ...
+    echo "  Base dir: $BASE_DIR"
+    clean_install "$INSTALL_TARGETS"
+    backup_install "$INSTALL_TARGETS"
+    report_sep
+    install_library
+    install_compiler
+    install_templates
+    install_stylesheets
+    echo done
+}
+
+install_usage() {
+    echo "install: Install the Closure Tools to the home directory."
+    echo
+    echo "usage: goog install"
+}
+
+clean_install() {
+    cd "$BASE_DIR"
+    for T in "${INSTALL_TARGETS[@]}"
+    do
+        rm -rf "$T.orig"
+    done
+}
+
+backup_install() {
+    cd "$BASE_DIR"
+    for T in "${INSTALL_TARGETS[@]}"
+    do
+        if [[ -e "$T" ]]
+        then
+            mv -f "$T" "$T.orig"
+        fi
+    done
+}
+
+LIB_ARCHIVE=library.tar.gz
+
+install_library() {
+    cd "$CACHE"
+    report 'Closure Library: Downloading'
+    rm -f "$LIB_ARCHIVE"
+    download "$MIRROR_URL/$LIB_ARCHIVE" .
+    report 'Closure Library: Extracting'
+    tar zxf "$LIB_ARCHIVE"
+    mv "$INSTALL_LIB" "$BASE_DIR"
+    report_sep
+}
+
+install_compiler() {
+    cd "$CACHE"
+    report 'Closure Compiler: Downloading'
+    download "$MIRROR_URL/$INSTALL_COMPILER" "$BASE_DIR"
+    report_sep
+}
+
+install_templates() {
+    cd "$CACHE"
+    report 'Closure Templates: Downloading'
+    download "$MIRROR_URL/$INSTALL_TEMPLATES" "$BASE_DIR"
+    report_sep
+}
+
+install_stylesheets() {
+    cd "$CACHE"
+    report 'Closure Stylesheets: Downloading'
+    download "$MIRROR_URL/$INSTALL_STYLESHEETS" "$BASE_DIR"
+    report_sep
+}
+
+# ======================================================================
+# mirror <build_path> <out_path>
+# ======================================================================
+
+do_mirror() {
+    if [ $# -lt 3 ]
+    then
+        mirror_usage
+    else
+        local build_path="$(realpath "$(dirname "$2")")/$(basename "$2")"
+        local out_path="$(realpath "$(dirname "$3")")/$(basename "$3")"
+        echo "Installing mirror ..."
+        echo "  Build root: $build_path"
+        echo "  Host root: $out_path"
+        if mkdir -p "$build_path" "$out_path"
+        then
+            report_sep
+            mirror_library "$build_path" "$out_path"
+            mirror_compiler "$build_path" "$out_path"
+            mirror_templates "$build_path" "$out_path"
+            mirror_stylesheets "$build_path" "$out_path"
+            du -hs "$out_path" | awk '{print "Mirrored: " $2 " ("$1")"}'
+            echo done
+        fi
+    fi
+}
+
+mirror_usage() {
+    echo 'mirror: Set up a mirror for the `install'"' command."
+    echo
+    echo "usage: goog mirror <build_path> <out_path>"
+    echo
+    echo "  build_path  The directory where packages are built. It will be"
+    echo "              created if it does not already exist"
+    echo "  out_path    The directory where publicly mirrored files are"
+    echo "              hosted. It will be created if it does not already"
+    echo "              exist."
+    echo
+    echo "Requires: ant (java), git, svn."
+}
+
+# Mirror targets
+MIRROR_LIB=library
+MIRROR_COMPILER=compiler
+MIRROR_TEMPLATES=templates
+MIRROR_STYLESHEETS=stylesheets
+
+# Mirror build targets
+MIRROR_LIB_ARCHIVE="$MIRROR_LIB.tar.gz"
+MIRROR_COMPILER_JAR='compiler.jar'
+MIRROR_TEMPLATES_JAR='soy.jar'
+MIRROR_STYLESHEET_JAR='closure-stylesheets.jar'
+
+# Mirror source URLs
+MIRROR_LIB_URL='https://code.google.com/p/closure-library/'
+MIRROR_COMPILER_URL='https://code.google.com/p/closure-compiler/'
+MIRROR_TEMPLATES_URL='http://closure-templates.googlecode.com/svn/trunk/'
+MIRROR_STYLESHEET_URL='https://code.google.com/p/closure-stylesheets/'
+
+mirror_header() {
+    report "Mirroring $1"
+}
+
+mirror_downloading() {
+    report "Downloading $1"
+}
+
+mirror_updating() {
+    report "Updating $1"
+}
+
+mirror_archiving() {
+    report "Building archive at $1"
+}
+
+mirror_building() {
+    report "Building $1"
+}
+
+mirror_footer() {
+    report "Target installed at $1"
+    report_sep
+}
+
+mirror_library() {
+    local name='Closure Library'
+    mirror_header "$name"
+    cd "$1"
+    if [[ ! -e "$MIRROR_LIB" ]]
+    then
+        mirror_downloading "$name"
+        "$GIT" clone -q "$MIRROR_LIB_URL" "$MIRROR_LIB"
+        cd "$MIRROR_LIB"
+    else
+        cd "$MIRROR_LIB"
+        mirror_updating "$name"
+        "$GIT" pull -q
+    fi
+    mirror_archiving "$MIRROR_LIB_ARCHIVE"
+    "$GIT" archive -o "$MIRROR_LIB.tar" --prefix="$MIRROR_LIB/" HEAD
+    gzip -f "$MIRROR_LIB.tar"
+    mv "$MIRROR_LIB_ARCHIVE" "$2"
+    mirror_footer "$MIRROR_LIB_ARCHIVE"
+}
+
+mirror_compiler() {
+    local name='Closure Compiler'
+    mirror_header "$name"
+    cd "$1"
+    local name
+    if [[ ! -e "$MIRROR_COMPILER" ]]
+    then
+        mirror_downloading "$name"
+        "$GIT" clone -q "$MIRROR_COMPILER_URL" "$MIRROR_COMPILER"
+        cd "$MIRROR_COMPILER"
+    else
+        cd "$MIRROR_COMPILER"
+        mirror_updating "$name"
+        "$GIT" pull -q
+    fi
+    mirror_building "$MIRROR_COMPILER_JAR"
+    "$ANT" jar 2&> /dev/null
+    mv "build/$MIRROR_COMPILER_JAR" "$2"
+    mirror_footer "$MIRROR_COMPILER_JAR"
+}
+
+mirror_templates() {
+    local name='Closure Templates'
+    mirror_header "$name"
+    cd "$1"
+    if [[ ! -e "$MIRROR_TEMPLATES" ]]
+    then
+        mirror_downloading "$name"
+        "$SVN" -q co "$MIRROR_TEMPLATES_URL" "$MIRROR_TEMPLATES"
+        cd "$MIRROR_TEMPLATES"
+    else
+        cd "$MIRROR_TEMPLATES"
+        mirror_updating "$name"
+        "$SVN" -q up
+    fi
+    mirror_building "$MIRROR_TEMPLATES_JAR"
+    "$ANT" -q jar 2&> /dev/null
+    mv "build/$MIRROR_TEMPLATES_JAR" "$2"
+    mirror_footer "$MIRROR_TEMPLATES_JAR"
+}
+
+mirror_stylesheets() {
+    local name='Closure Stylesheets'
+    mirror_header "$name"
+    cd "$1"
+    if [[ ! -e "$MIRROR_STYLESHEETS" ]]
+    then
+        mirror_downloading "$name"
+        "$GIT" clone -q "$MIRROR_STYLESHEET_URL" "$MIRROR_STYLESHEETS"
+        cd "$MIRROR_STYLESHEETS"
+    else
+        cd "$MIRROR_STYLESHEETS"
+        mirror_updating "$name"
+        "$GIT" pull -q
+    fi
+    mirror_building "$MIRROR_STYLESHEET_JAR"
+    "$ANT" jar 2&> /dev/null
+    mv "build/$MIRROR_STYLESHEET_JAR" "$2"
+    mirror_footer "$MIRROR_STYLESHEET_JAR"
+}
+
+# ======================================================================
+# skel <path>
+# ======================================================================
+
+SKEL_DEFAULT='closure-project'
+
+do_skel() {
+    if [[ $# -lt 2 ]]
+    then
+        local skel="$SKEL_DEFAULT"
+    else
+        local skel="$2"
+    fi
+    local base="$(skel_namespace "$1")"
+    echo -n "Creating new project at $skel ... "
+    mkdir -p "$skel"
+    skel_rc "$base" > "$skel/.googrc"
+    skel_sources "$base" "$skel"
+    echo done
+}
+
+skel_usage() {
+    echo "skel: Generate a project skeleton."
+    echo
+    echo "usage: goog skel <path>"
+    echo
+    echo "  path  The directory where the new project will be created."
+    echo "        This directory will be created if it does not already exist."
+}
+
+skel_namespace() {
+    echo "$1" | tr '[A-Z]' '[a-z]' | sed -e 's/[^A-Za-z0-9]//g'
+}
+
+skel_rc() {
+    echo "# goog.bash config file: Generated at "$(date)""
+    echo
+    echo "name=$1"
+    echo "namespace=$1.main"
+}
+
+skel_sources() {
+    mkdir -p "$2"/{js,soy,gss}
+    skel_js "$1" > "$2/js/main.js"
+    skel_gss "$1" > "$2/gss/01-global.gss"
+    skel_tpl "$1" > "$2/soy/tpl.soy"
+}
+
+skel_js() {
+    echo "goog.provide('$1.main')"
+}
+
+skel_gss() {
+    echo 'body { background: white; }'
+}
+
+skel_tpl() {
+    echo '{namespace $1.tpl}'
+    echo
+    echo '/**'
+    echo ' */'
+    echo '{template .main}'
+    echo '{/template}'
+}
+
+# ======================================================================
+# Utilities
+# ======================================================================
+
+download() {
+    if has_cmd wget
+    then
+        wget -q -P "$2" "$1"
+    else
+        curl -s "$1" > "$2/"$(basename $1)""
+    fi
+}
+
+has_cmd() {
+    hash "$1" &>/dev/null
+}
+
+report() {
+    echo "* $1"
+}
+
+report_sep() {
+    echo ----------------------------------------
+}
+
+inc() {
+    eval "$1"="$(eval expr \$$1 + 1)"
+}
+
+# ======================================================================
+# self-test [<suites>]
+#
+# Warning, some of these will take a while to run.
+# ======================================================================
+
+TESTS_FAILED=0
+TESTS_PASSED=0
+TESTS_RUN=0
+
+report_test() {
+    report "$TESTS_PASSED of $TESTS_RUN tests passed."
+}
+
+do_self_test() {
+    echo 'Running test suite ...'
+    local state="$(test_setup)"
+    if [[ $# -gt 1 ]]
+    then
+        local suites=(${@:2})
+    else
+        local suites=('mirror' \
+                      'install' \
+                      'skel')
+    fi
+    if [[ -z "$state" ]]
+    then
+        report "ERROR: Test setup failed"
+        exit 1
+    else
+        report_sep
+        for S in ${suites[@]}
+        do
+            echo "Running tests: $S ..."
+            "test_$S" "$state"
+            report_sep
+        done
+        report_test
+        test_teardown "$state"
+    fi
+}
+
+self_test_usage() {
+    echo 'self-test: Run the `goog'"' script's tests."
+    echo
+    echo "usage: goog self-test"
+}
+
+test_setup() {
+    if [[ -e "$BASE_DIR" ]]
+    then
+        rm -rf "$BASE_DIR.orig"
+        mv "$BASE_DIR" "$BASE_DIR.orig"
+        mkdir -p "$CACHE"
+    fi
+    mktemp -d
+}
+
+test_mirror() {
+    cd "$1"
+    do_mirror _ "$1/build" "$1/host"
+    assert exists "$1/host/$MIRROR_LIB_ARCHIVE" "$LINENO"
+    assert exists "$1/host/$MIRROR_COMPILER_JAR" "$LINENO"
+    assert exists "$1/host/$MIRROR_TEMPLATES_JAR" "$LINENO"
+    assert exists "$1/host/$MIRROR_STYLESHEET_JAR" "$LINENO"
+    rm -rf $1/build $1/host
+}
+
+test_install() {
+    do_install
+    for T in ${INSTALL_TARGETS[@]}
+    do
+        assert exists "$BASE_DIR/$T" "$LINENO"
+    done
+}
+
+test_skel() {
+    do_skel _ "$1"
+    assert exists "$1/js/main.js" "$LINENO"
+    assert exists "$1/gss/01-global.gss" "$LINENO"
+    assert exists "$1/soy/tpl.soy" "$LINENO"
+}
+
+test_teardown() {
+    rm -rf $1
+    if [[ -e "$BASE_DIR.orig" ]]
+    then
+        mv "$BASE_DIR.orig" "$BASE_DIR"
+    fi
+}
+
+assert() {
+    if [[ $# -lt 3 ]]
+    then
+        FN=true
+    else
+        FN="$1"
+        shift
+    fi
+    if "assert_$FN" "$1"
+    then
+        inc TESTS_PASSED
+        inc TESTS_RUN
+    else
+        inc TESTS_FAILED
+        inc TESTS_RUN
+        report "[FAIL] L$2: Assert $FN \"$1\""
+    fi
+}
+
+assert_true() {
+    [[ -n "$1" ]]
+}
+
+assert_exists() {
+    [[ -e "$1" ]]
+}
+
+# Script entry point
+main $*
