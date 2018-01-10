@@ -1,10 +1,11 @@
-#!/usr/bin/env node
+#!/usr/bin/env /Users/thanpolas/.nvm/versions/node/v6.10.0/bin/node
 
 // a simple static webserver
-var connect = require('connect');
+var http = require('http');
+var serveStatic = require('serve-static'); // https://www.npmjs.com/package/serve-static
 var path = require('path');
 var exec = require('child_process').exec;
-
+var finalhandler = require('finalhandler');
 
 var filename = path.basename(process.argv[1]);
 process.argv.forEach(function(val, index, array){
@@ -27,9 +28,12 @@ console.log('Web root: ' + dir);
 console.log('Port    : ' + port);
 console.log('Going to   : http://localhost:' + port);
 try {
-  var app = connect()
-    .use(connect.static(dir))
-    .listen(port);
+
+  var serve = serveStatic(dir);
+  var server = http.createServer(function onRequest(req, res) {
+    serve(req, res, finalhandler(req, res))
+  });
+  server.listen(port);
 
   exec('open -a Google\\ Chrome\\ Canary http://localhost:' + port,
     function(error, stdout, stderr){
